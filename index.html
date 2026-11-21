@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>StS 攻略・評価検索</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card-bg: #1e293b;
+    --card-border: #334155;
+    --text: #f1f5f9;
+    --text-muted: #94a3b8;
+    --accent: #38bdf8;
+    --ironclad: #ef4444;
+    --silent: #22c55e;
+    --defect: #3b82f6;
+    --watcher: #a855f7;
+    --neow: #14b8a6;
+    --boss_relic: #f59e0b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    padding-bottom: 40px;
+  }
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(15, 23, 42, 0.96);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--card-border);
+    padding: 10px 12px;
+  }
+  .search-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  #searchInput {
+    width: 100%;
+    padding: 10px 38px 10px 12px;
+    font-size: 16px;
+    border-radius: 8px;
+    border: 1px solid var(--card-border);
+    background: var(--card-bg);
+    color: var(--text);
+    outline: none;
+  }
+  #searchInput:focus { border-color: var(--accent); }
+  #clearBtn {
+    position: absolute;
+    right: 8px;
+    background: #475569;
+    color: #fff;
+    border: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    font-size: 14px;
+    line-height: 24px;
+    text-align: center;
+    cursor: pointer;
+    display: none;
+  }
+  .tabs {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    flex: 0 0 auto;
+    padding: 6px 12px;
+    border-radius: 16px;
+    border: 1px solid var(--card-border);
+    background: var(--card-bg);
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .tab-btn.active { color: #fff; border-color: transparent; }
+  .tab-btn[data-char="all"].active { background: #475569; }
+  .tab-btn[data-char="ironclad"].active { background: var(--ironclad); }
+  .tab-btn[data-char="silent"].active { background: var(--silent); color: #052e16; }
+  .tab-btn[data-char="defect"].active { background: var(--defect); }
+  .tab-btn[data-char="watcher"].active { background: var(--watcher); }
+  .tab-btn[data-char="neow"].active { background: var(--neow); color: #042f2e; }
+  .tab-btn[data-char="boss_relic"].active { background: var(--boss_relic); color: #451a03; }
+
+  .filters {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  select {
+    background: var(--card-bg);
+    color: var(--text);
+    border: 1px solid var(--card-border);
+    border-radius: 6px;
+    padding: 5px 8px;
+    font-size: 13px;
+  }
+  .meta-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px 4px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .toggle-all-btn {
+    background: none;
+    border: 1px solid var(--card-border);
+    color: var(--text-muted);
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  #cardList {
+    padding: 4px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-left-width: 4px;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .card.char-ironclad { border-left-color: var(--ironclad); }
+  .card.char-silent { border-left-color: var(--silent); }
+  .card.char-defect { border-left-color: var(--defect); }
+  .card.char-watcher { border-left-color: var(--watcher); }
+  .card.char-neow { border-left-color: var(--neow); }
+  .card.char-boss_relic { border-left-color: var(--boss_relic); }
+
+  .card-header {
+    padding: 10px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+  }
+  .card-title-area {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .card-name {
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .card-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .badges {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+  .prio-高 { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4); }
+  .prio-中 { background: rgba(234, 179, 8, 0.2); color: #fde047; border: 1px solid rgba(234, 179, 8, 0.4); }
+  .prio-低 { background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.3); }
+  .prio-none { background: rgba(100, 116, 139, 0.15); color: #94a3b8; border: 1px solid rgba(100, 116, 139, 0.2); }
+
+  .card-body {
+    display: none;
+    padding: 0 12px 12px;
+    border-top: 1px solid rgba(51, 65, 85, 0.6);
+    font-size: 13px;
+  }
+  .card.open .card-body { display: block; }
+  .detail-row { margin-top: 8px; }
+  .detail-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 3px;
+  }
+
+  .char-eval-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .char-eval-item {
+    background: rgba(15, 23, 42, 0.55);
+    border: 1px solid rgba(51, 65, 85, 0.8);
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 12.5px;
+  }
+  .char-eval-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 2px;
+  }
+  .char-tag {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 4px;
+    color: #fff;
+  }
+  .tag-ironclad { background: var(--ironclad); }
+  .tag-silent { background: var(--silent); color: #052e16; }
+  .tag-defect { background: var(--defect); }
+  .tag-watcher { background: var(--watcher); }
+
+  .empty-msg {
+    text-align: center;
+    padding: 40px 16px;
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="search-wrap">
+    <input type="text" id="searchInput" placeholder="名前・効果・キャラ相性などで検索...">
+    <button id="clearBtn" aria-label="クリア">×</button>
+  </div>
+  <div class="tabs" id="charTabs">
+    <button class="tab-btn active" data-char="all">全て</button>
+    <button class="tab-btn" data-char="ironclad">アイクラ</button>
+    <button class="tab-btn" data-char="silent">サイレント</button>
+    <button class="tab-btn" data-char="defect">ディフェクト</button>
+    <button class="tab-btn" data-char="watcher">ウォッチャー</button>
+    <button class="tab-btn" data-char="neow">ネオー</button>
+    <button class="tab-btn" data-char="boss_relic">ボスレリ</button>
+  </div>
+  <div class="filters">
+    <select id="typeFilter">
+      <option value="all">タイプ：全て</option>
+      <option value="アタック">アタック</option>
+      <option value="スキル">スキル</option>
+      <option value="パワー">パワー</option>
+    </select>
+    <select id="pickFilter">
+      <option value="all">優先度 / 評価：全て</option>
+      <option value="高">高</option>
+      <option value="中">中</option>
+      <option value="低">低</option>
+    </select>
+  </div>
+</header>
+
+<div class="meta-bar">
+  <span id="countText">読み込み中...</span>
+  <button class="toggle-all-btn" id="toggleAllBtn">すべて開く / 閉じる</button>
+</div>
+
+<main id="cardList"></main>
+
+<script>
+  window.STS_CARDS = [];
+</script>
+<script src="data_ironclad.js"></script>
+<script src="data_silent.js"></script>
+<script src="data_defect.js"></script>
+<script src="data_watcher.js"></script>
+<script src="data_neow.js"></script>
+<script src="data_boss_relics.js"></script>
+
+<script>
+(function() {
+  const CHAR_LABELS = {
+    ironclad: "アイクラ",
+    silent: "サイレント",
+    defect: "ディフェクト",
+    watcher: "ウォッチャー",
+    neow: "ネオーボーナス",
+    boss_relic: "ボスレリック"
+  };
+
+  const CHAR_EVAL_ORDER = [
+    { key: "ironclad", label: "アイクラ", cls: "tag-ironclad" },
+    { key: "silent", label: "サイレント", cls: "tag-silent" },
+    { key: "defect", label: "ディフェクト", cls: "tag-defect" },
+    { key: "watcher", label: "ウォッチャー", cls: "tag-watcher" }
+  ];
+
+  let currentChar = "all";
+  let allExpanded = false;
+
+  const searchInput = document.getElementById("searchInput");
+  const clearBtn = document.getElementById("clearBtn");
+  const charTabs = document.getElementById("charTabs");
+  const typeFilter = document.getElementById("typeFilter");
+  const pickFilter = document.getElementById("pickFilter");
+  const cardList = document.getElementById("cardList");
+  const countText = document.getElementById("countText");
+  const toggleAllBtn = document.getElementById("toggleAllBtn");
+
+  function esc(str) {
+    if (!str) return "";
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function norm(str) {
+    return (str || "").normalize("NFKC").toLowerCase();
+  }
+
+  function badgeClass(val) {
+    if (val === "高" || val === "中" || val === "低") return "prio-" + val;
+    return "prio-none";
+  }
+
+  function flattenCharEval(charRatings) {
+    if (!charRatings) return "";
+    return Object.values(charRatings)
+      .map(v => (v ? `${v.rating || ""} ${v.comment || ""}` : ""))
+      .join(" ");
+  }
+
+  function renderCharEvalHtml(charRatings) {
+    if (!charRatings) return "";
+    const items = CHAR_EVAL_ORDER.map(info => {
+      const data = charRatings[info.key];
+      if (!data || (!data.comment && !data.rating)) return "";
+      if (data.comment === "-" && (!data.rating || data.rating === "-")) return "";
+      const ratingBadge = data.rating && data.rating !== "-"
+        ? `<span class="badge ${badgeClass(data.rating)}">評価:${esc(data.rating)}</span>`
+        : "";
+      return `
+        <div class="char-eval-item">
+          <div class="char-eval-head">
+            <span class="char-tag ${info.cls}">${info.label}</span>
+            ${ratingBadge}
+          </div>
+          <div>${esc(data.comment || "")}</div>
+        </div>
+      `;
+    }).filter(Boolean);
+
+    if (items.length === 0) return "";
+    return `
+      <div class="detail-row">
+        <div class="detail-label">キャラ別の評価</div>
+        <div class="char-eval-list">${items.join("")}</div>
+      </div>
+    `;
+  }
+
+  function render() {
+    const q = norm(searchInput.value.trim());
+    const isSpecialTab = (currentChar === "neow" || currentChar === "boss_relic");
+    typeFilter.style.display = isSpecialTab ? "none" : "inline-block";
+
+    const tVal = isSpecialTab ? "all" : typeFilter.value;
+    const pVal = pickFilter.value;
+    clearBtn.style.display = searchInput.value ? "block" : "none";
+
+    const filtered = window.STS_CARDS.filter(c => {
+      if (currentChar !== "all" && c.char !== currentChar) return false;
+      if (tVal !== "all" && c.type !== tVal) return false;
+      if (pVal !== "all" && c.pick !== pVal) return false;
+      if (q) {
+        const target = norm([
+          c.name, c.alias, c.type,
+          c.pickReason, c.ugReason,
+          c.synergy, c.synergyReason, c.note,
+          flattenCharEval(c.charRatings)
+        ].join(" "));
+        if (!target.includes(q)) return false;
+      }
+      return true;
+    });
+
+    countText.textContent = `表示：${filtered.length}件（全${window.STS_CARDS.length}件）`;
+
+    if (filtered.length === 0) {
+      cardList.innerHTML = `<div class="empty-msg">該当する項目がありません。<br>（未作成のデータは追加後に表示されます）</div>`;
+      return;
+    }
+
+    const autoOpen = (q && filtered.length <= 3) || allExpanded;
+
+    cardList.innerHTML = filtered.map(c => {
+      const charName = CHAR_LABELS[c.char] || c.char;
+      const aliasHtml = c.alias ? ` / 別名: ${esc(c.alias)}` : "";
+      const isSpecial = (c.char === "neow" || c.char === "boss_relic");
+      const subText = c.type ? `${esc(charName)}・${esc(c.type)}${aliasHtml}` : `${esc(charName)}${aliasHtml}`;
+
+      let badgesHtml = "";
+      let bodyHtml = "";
+
+      if (isSpecial) {
+        const pickLabel = c.char === "neow" ? "推奨" : "評価";
+        badgesHtml = `<span class="badge ${badgeClass(c.pick)}">${pickLabel}:${esc(c.pick)}</span>`;
+        const reasonLabel = c.char === "neow" ? `総合評価・選ぶ基準【${esc(c.pick)}】` : `総合評価・取得基準【${esc(c.pick)}】`;
+
+        bodyHtml = `
+          <div class="detail-row">
+            <div class="detail-label">${reasonLabel}</div>
+            <div>${esc(c.pickReason)}</div>
+          </div>
+          ${renderCharEvalHtml(c.charRatings)}
+          ${c.synergy && c.synergy !== "-" ? `
+          <div class="detail-row">
+            <div class="detail-label">相性の良いカード・状況</div>
+            <div>${esc(c.synergy)}</div>
+          </div>` : ""}
+          ${c.synergyReason && c.synergyReason !== "-" ? `
+          <div class="detail-row">
+            <div class="detail-label">相性・理由の詳細</div>
+            <div>${esc(c.synergyReason)}</div>
+          </div>` : ""}
+          ${c.note && c.note !== "-" ? `
+          <div class="detail-row">
+            <div class="detail-label">デメリット・注意点・備考</div>
+            <div>${esc(c.note)}</div>
+          </div>` : ""}
+        `;
+      } else {
+        badgesHtml = `
+          <span class="badge ${badgeClass(c.pick)}">P:${esc(c.pick)}</span>
+          <span class="badge ${badgeClass(c.ug)}">UG:${esc(c.ug)}</span>
+        `;
+        bodyHtml = `
+          <div class="detail-row">
+            <div class="detail-label">ピック優先度【${esc(c.pick)}】の理由</div>
+            <div>${esc(c.pickReason)}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">UG優先度【${esc(c.ug)}】の理由</div>
+            <div>${esc(c.ugReason)}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">組み合わせると強いカード</div>
+            <div>${esc(c.synergy)}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">組み合わせると強いカードの理由</div>
+            <div>${esc(c.synergyReason)}</div>
+          </div>
+          ${c.note && c.note !== "-" ? `
+          <div class="detail-row">
+            <div class="detail-label">その他備考</div>
+            <div>${esc(c.note)}</div>
+          </div>` : ""}
+        `;
+      }
+
+      return `
+        <article class="card char-${esc(c.char)} ${autoOpen ? "open" : ""}">
+          <div class="card-header" onclick="this.parentElement.classList.toggle('open')">
+            <div class="card-title-area">
+              <div class="card-name">${esc(c.name)}</div>
+              <div class="card-sub">${subText}</div>
+            </div>
+            <div class="badges">${badgesHtml}</div>
+          </div>
+          <div class="card-body">${bodyHtml}</div>
+        </article>
+      `;
+    }).join("");
+  }
+
+  searchInput.addEventListener("input", render);
+  clearBtn.addEventListener("click", () => {
+    searchInput.value = "";
+    render();
+    searchInput.focus();
+  });
+  charTabs.addEventListener("click", e => {
+    const btn = e.target.closest(".tab-btn");
+    if (!btn) return;
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentChar = btn.dataset.char;
+    render();
+  });
+  typeFilter.addEventListener("change", render);
+  pickFilter.addEventListener("change", render);
+  toggleAllBtn.addEventListener("click", () => {
+    allExpanded = !allExpanded;
+    document.querySelectorAll(".card").forEach(el => {
+      el.classList.toggle("open", allExpanded);
+    });
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
